@@ -1,3 +1,4 @@
+
 name: Model Training CICD
 
 permissions:
@@ -12,14 +13,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -34,7 +37,8 @@ jobs:
             libgif-dev \
             librsvg2-dev
 
-      - uses: iterative/setup-cml@v2
+      - name: Set up CML
+        uses: iterative/setup-cml@v2
 
       - name: Train model and generate report
         env:
