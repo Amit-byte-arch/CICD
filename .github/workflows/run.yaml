@@ -12,11 +12,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone repository manually
-        run: |
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git .
+      - uses: actions/checkout@v4
 
-      - name: Install system and python dependencies
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -26,18 +34,15 @@ jobs:
             libgif-dev \
             librsvg2-dev
 
-          python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - uses: iterative/setup-cml@v2
 
-      - name: Install CML CLI via npm
-        run: |
-          npm install -g @cml/cml
-
-      - name: Train model and post report
+      - name: Train model and generate report
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python3 train_model.py
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python train_model.py
 
           echo "RF and LR Model Score" > report.md
           cat scores.txt >> report.md
