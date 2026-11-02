@@ -8,21 +8,27 @@ permissions:
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
   run:
     runs-on: ubuntu-24.04
 
     steps:
+      # 1. Download repository code
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      # 2. Configure Python
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.10'
           cache: 'pip'
 
+      # 3. Install system dependencies
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -33,29 +39,62 @@ jobs:
             libgif-dev \
             librsvg2-dev
 
+      # 4. Configure CML
       - name: Set up CML
         uses: iterative/setup-cml@v2
 
-      - name: Train model and generate report
-        env:
-          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 5. Install Python libraries
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # 6. Train machine learning model
+      - name: Train model
+        run: |
           python train_model.py
 
-          echo "# RF and LR Model Score" > report.md
+      # 7. Verify output files
+      - name: Verify generated files
+        run: |
+          echo "Checking generated files..."
+          ls -lah
+          test -f scores.txt
+          test -f ConfusionMatrix.png
+          test -f FeatureImportance.png
+
+      # 8. Generate report
+      - name: Generate ML report
+        run: |
+          echo "# Random Forest and Linear Regression Model Scores" > report.md
           cat scores.txt >> report.md
 
-          echo "# Confusion Matrix & Feature Importance" > report1.md
-          echo "![](./ConfusionMatrix.png)" >> report1.md
-          echo "![](./FeatureImportance.png)" >> report1.md
+          echo "" >> report.md
+          echo "# Confusion Matrix" >> report.md
+          echo "![](./ConfusionMatrix.png)" >> report.md
 
-          cat report.md report1.md > combined_file.md
+          echo "" >> report.md
+          echo "# Feature Importance" >> report.md
+          echo "![](./FeatureImportance.png)" >> report.md
 
-          echo "Checking generated files:"
-          ls -lh
+          echo "Report generated successfully."
+          cat report.md
 
-          echo "Publishing CML report..."
-          cml comment create combined_file.md
+      # 9. Publish report through CML
+      - name: Publish CML report
+        if: github.event_name == 'pull_request'
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cml comment create report.md
+
+      # 10. Save report as workflow artifact
+      - name: Upload ML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ML-Training-Report
+          path: |
+            report.md
+            scores.txt
+            ConfusionMatrix.png
+            FeatureImportance.png
